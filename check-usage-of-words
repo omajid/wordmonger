@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+
+import argparse
+from collections import namedtuple
+import sys
+
+WORDS_AND_USAGE = {
+    'kafka': 'Apache Kafka',
+    'k8s': 'Kubernetes',
+}
+
+BadUsage = namedtuple('BadUsage', ['position', 'word', 'replacement'])
+
+def check_usage(words_and_usage, word, entire_file, index):
+    replacement = words_and_usage[word]
+    if word in replacement:
+        # the original word appears in the correct form too, so we
+        # need to check more carefully
+        start = index - replacement.index(word)
+        end = start + len(replacement)
+        raw_file_text = entire_file[start:end]
+        cleaned_up_text = raw_file_text.replace('\n', ' ')
+        if cleaned_up_text != replacement:
+            return BadUsage(index, word, replacement)
+        return None
+    else:
+        return BadUsage(index, word, replacement)
+
+def check_file(words_and_usage, filename):
+    bad_usages = []
+    with open(filename) as f:
+        lines = f.readlines()
+        original_file = ''.join(lines)
+        for word in words_and_usage:
+            index = 0
+            while True:
+                index = original_file.find(word, index)
+                if index == -1:
+                    break
+                bad_usage = check_usage(words_and_usage, word, original_file, index)
+                if bad_usage:
+                    bad_usages.append(bad_usage)
+                index = index + 1
+    return bad_usages
+
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename')
+    args = parser.parse_args()
+    filename = args.filename
+
+    bad_usages = check_file(WORDS_AND_USAGE, filename)
+    for bad_usage in bad_usages:
+        print(str(bad_usage.position) + ': "' + bad_usage.word + '" -> "' + bad_usage.replacement + '"')
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
