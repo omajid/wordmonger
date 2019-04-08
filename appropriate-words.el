@@ -39,14 +39,36 @@
   "Face for warnings"
   :group 'appropriate-words)
 
+(defcustom appropriate-words-word-alist
+  '()
+  "A list of (WORD . REPLACEMENT).
+
+Each pair indicates a term that should not appear in text unless it's as REPLACEMENT.
+
+For example: (setq appropriate-words-word-alist '((\"foo\" . \"my foo bar\"))."
+  :group 'appropriate-words)
+
+(defun appropriate-words--write-config (file)
+  "Write a config to FILE based on current mode configuration."
+  (with-temp-file file
+    (insert "[DEFAULT]\n")
+    (mapc (lambda (elt) (insert (format "%s=%s\n" (car elt) (cdr elt))))
+          appropriate-words-word-alist)))
+
+(defun appropriate-words--initialize-config ()
+  "Create an initialize a configuration file."
+  (let ((file (make-temp-file "appropriate-words-config")))
+    (appropriate-words--write-config file)
+    file))
+
 (defun appropriate-words--check ()
   "Check current buffer for containing special words."
-  (message "checking words")
   (remove-overlays nil nil 'appropriate-words-overlay t)
-  (let* ((checker (expand-file-name
+  (let* ((configfile (appropriate-words--initialize-config))
+         (checker (expand-file-name
                    "check-usage-of-words"
                    (file-name-directory (symbol-file 'appropriate-words--check))))
-         (output (shell-command-to-string (concat checker " " (buffer-file-name))))
+         (output (shell-command-to-string (concat checker " " configfile " "  (buffer-file-name))))
          (lines (split-string output "\n")))
     (mapc (lambda (line)
             (when (string-match "\\([[:digit:]]+\\): \"\\([^\"]+\\)\" -> \"\\([^\"]+\\)\"" line)
@@ -58,7 +80,8 @@
                 (overlay-put overlay 'appropriate-words-overlay t)
                 (overlay-put overlay 'face 'appropriate-words-warning-face)
                 (overlay-put overlay 'help-echo (format "Should be '%s'" replacement)))))
-          lines)))
+          lines)
+    (delete-file configfile)))
 
 (defun appropriate-words--clear ()
   "Clear all cruft from the buffer."

@@ -2,12 +2,8 @@
 
 import argparse
 from collections import namedtuple
+import configparser
 import sys
-
-WORDS_AND_USAGE = {
-    'kafka': 'Apache Kafka',
-    'k8s': 'Kubernetes',
-}
 
 BadUsage = namedtuple('BadUsage', ['position', 'word', 'replacement'])
 
@@ -43,13 +39,29 @@ def check_file(words_and_usage, filename):
                 index = index + 1
     return bad_usages
 
+
+def initialize_words(configfile):
+    config = configparser.ConfigParser()
+    config.read(configfile)
+    words_and_usage = {}
+    for key in config['DEFAULT']:
+        words_and_usage[key] = config['DEFAULT'][key]
+    return words_and_usage
+
 def main(args):
     parser = argparse.ArgumentParser()
+    parser.add_argument('configfile')
     parser.add_argument('filename')
     args = parser.parse_args()
+    configfile = args.configfile
     filename = args.filename
 
-    bad_usages = check_file(WORDS_AND_USAGE, filename)
+    with open(args.configfile) as f:
+        print('Configuration is:' + str(f.readlines()))
+
+    words_and_usage = initialize_words(configfile)
+
+    bad_usages = check_file(words_and_usage, filename)
     for bad_usage in bad_usages:
         print(str(bad_usage.position) + ': "' + bad_usage.word + '" -> "' + bad_usage.replacement + '"')
 
