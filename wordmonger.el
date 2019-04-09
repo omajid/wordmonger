@@ -1,10 +1,10 @@
-;;; appropriate-words.el --- highlight inappropriate words  -*- lexical-binding: t -*-
+;;; wordmonger.el --- highlight inappropriate words for review -*- lexical-binding: t -*-
 
 ;;; Copyright (C) 2019 Omair Majid
 
 ;; Author: Omair Majid <omair.majid@gmail.com>
-;; URL: https://github.com/omajid/appropriate-words/
-;; Keywords:
+;; URL: https://github.com/omajid/wordmonger
+;; Keywords: wp files
 ;; Version: 0.1.20190404
 ;; Package-Requires: ((emacs "24"))
 
@@ -30,44 +30,46 @@
 
 ;;; Code:
 
-(defgroup appropriate-words nil
-  "Group for `appropriate-words'."
-  :group nil)
+(defgroup wordmonger nil
+  "Group for `wordmonger'."
+  :group 'text)
 
-(defface appropriate-words-warning-face
+(defface wordmonger-warning-face
   '((t (:inherit warning :background "red")))
   "Face for warnings"
-  :group 'appropriate-words)
+  :group 'wordmonger)
 
-(defcustom appropriate-words-word-alist
+(defcustom wordmonger-word-alist
   '()
   "A list of (WORD . REPLACEMENT).
 
-Each pair indicates a term that should not appear in text unless it's as REPLACEMENT.
+Each pair indicates a term that should not appear in text unless
+it's as REPLACEMENT.
 
-For example: (setq appropriate-words-word-alist '((\"foo\" . \"my foo bar\"))."
-  :group 'appropriate-words)
+For example: (setq wordmonger-word-alist '((\"foo\" . \"my foo bar\"))."
+  :type '(alist :key-type string :value-type string)
+  :group 'wordmonger)
 
-(defun appropriate-words--write-config (file)
+(defun wordmonger--write-config (file)
   "Write a config to FILE based on current mode configuration."
   (with-temp-file file
     (insert "[DEFAULT]\n")
     (mapc (lambda (elt) (insert (format "%s=%s\n" (car elt) (cdr elt))))
-          appropriate-words-word-alist)))
+          wordmonger-word-alist)))
 
-(defun appropriate-words--initialize-config ()
+(defun wordmonger--initialize-config ()
   "Create an initialize a configuration file."
-  (let ((file (make-temp-file "appropriate-words-config")))
-    (appropriate-words--write-config file)
+  (let ((file (make-temp-file "wordmonger-config")))
+    (wordmonger--write-config file)
     file))
 
-(defun appropriate-words--check ()
+(defun wordmonger--check ()
   "Check current buffer for containing special words."
-  (remove-overlays nil nil 'appropriate-words-overlay t)
-  (let* ((configfile (appropriate-words--initialize-config))
+  (remove-overlays nil nil 'wordmonger-overlay t)
+  (let* ((configfile (wordmonger--initialize-config))
          (checker (expand-file-name
-                   "check-usage-of-words"
-                   (file-name-directory (symbol-file 'appropriate-words--check))))
+                   "wordmonger-check"
+                   (file-name-directory (symbol-file 'wordmonger--check))))
          (output (shell-command-to-string (concat checker " " configfile " "  (buffer-file-name))))
          (lines (split-string output "\n")))
     (mapc (lambda (line)
@@ -77,27 +79,28 @@ For example: (setq appropriate-words-word-alist '((\"foo\" . \"my foo bar\"))."
                      (pos-end (+ pos-start (string-bytes word)))
                      (replacement (match-string 3 line))
                      (overlay (make-overlay pos-start pos-end nil t)))
-                (overlay-put overlay 'appropriate-words-overlay t)
-                (overlay-put overlay 'face 'appropriate-words-warning-face)
+                (overlay-put overlay 'wordmonger-overlay t)
+                (overlay-put overlay 'face 'wordmonger-warning-face)
                 (overlay-put overlay 'help-echo (format "Should be '%s'" replacement)))))
           lines)
     (delete-file configfile)))
 
-(defun appropriate-words--clear ()
+(defun wordmonger--clear ()
   "Clear all cruft from the buffer."
-  (remove-overlays nil nil 'appropriate-words-overlay t))
+  (remove-overlays nil nil 'wordmonger-overlay t))
 
-(define-minor-mode appropriate-words-mode
-  "Minor mode for checking appropriate-words"
+(define-minor-mode wordmonger-mode
+  "Minor mode for checking technical terms"
   :init-value nil
   :lighther "ಠ_ರೃ"
   :keymap nil
-  (if appropriate-words-mode
+  :group 'wordmonger
+  (if wordmonger-mode
       (progn
-        (appropriate-words--check)
-        (add-hook 'after-save-hook #'appropriate-words--check nil t))
-    (remove-hook 'after-save-hook #'appropriate-words--check t)
-    (appropriate-words--clear)))
+        (wordmonger--check)
+        (add-hook 'after-save-hook #'wordmonger--check nil t))
+    (remove-hook 'after-save-hook #'wordmonger--check t)
+    (wordmonger--clear)))
 
-(provide 'appropriate-words)
-;;; appropriate-words.el ends here
+(provide 'wordmonger)
+;;; wordmonger.el ends here
