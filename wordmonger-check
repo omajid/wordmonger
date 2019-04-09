@@ -42,6 +42,7 @@ def check_file(words_and_usage, filename):
 
 def initialize_words(configfile):
     config = configparser.ConfigParser()
+    config.optionxform = lambda option: option
     config.read(configfile)
     words_and_usage = {}
     for key in config['DEFAULT']:
