@@ -32,7 +32,7 @@ If you are using `use-package`:
 
 ``` emacs-lisp
 (use-package wordmonger
-  :load-path "/home/omajid/devel/appropriate-words/"
+  :load-path "/path/to/where/you/cloned/wordmonger/"
   :demand
   :config
   (add-to-list 'wordmonger-word-alist '("linux" "GNU/Linux"))
